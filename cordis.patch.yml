@@ -1,0 +1,12 @@
+# dsh-session-delete bundle patch
+#
+# Installed through the official CLI:
+#
+#   dsh plugin --profile web add <path-or-package>
+#
+# which reconciles dsh.profile.bundles and appends this plugin to the bundle
+# stack; the profile boot then merges THIS patch (a single insert of the
+# plugin row) exactly like a manual cordis.patch.yml mount line.
+- insert:
+    - id: session-delete
+      name: 'dsh-session-delete'
