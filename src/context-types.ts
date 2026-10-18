@@ -7,7 +7,9 @@
  * file):
  *
  * - webServer:     @deepseek-ai/dsh-host-webserver (WebServer.register)
- * - webRuntime:    @deepseek-ai/dsh-web-app (bind-derived trusted hosts)
+ * - webStartup:    @deepseek-ai/dsh-web-app (WEB_STARTUP_SERVICE; its
+ *                  trustedHosts are the bind-derived trusted authorities,
+ *                  read lazily via ctx.get — never injected)
  * - sessions:      host side @deepseek-ai/dsh-session (SessionStore)
  * - sessionPersistence: @deepseek-ai/dsh-session-persistence-jsonl
  *   (SessionPersistence backend instance: locate/list/root)
@@ -50,8 +52,12 @@ export interface SessionDeleteWebServer {
   register(route: SessionDeleteWebRoute): () => void
 }
 
-/** The web runtime service face (mirror of @deepseek-ai/dsh-web-app's WebRuntimeValues). */
-export interface SessionDeleteWebRuntime {
+/**
+ * The web-startup service face (mirror of @deepseek-ai/dsh-web-app's
+ * WEB_STARTUP_SERVICE values). Optional from this plugin's point of view: it
+ * is looked up lazily with ctx.get, never injected.
+ */
+export interface SessionDeleteWebStartup {
   trustedHosts: readonly string[]
 }
 
@@ -174,7 +180,12 @@ export interface Context {
   /** Look up an un-injected service fail-soft (used for the agents guard). */
   get(name: string): unknown
   webServer: SessionDeleteWebServer
-  webRuntime: SessionDeleteWebRuntime
+  /**
+   * The optional web-startup service. Never injected: read lazily with
+   * `get('webStartup')` so a missing or renamed service cannot leave the
+   * cordis entry pending.
+   */
+  webStartup?: SessionDeleteWebStartup
   sessions: SessionDeleteSessionStore
   sessionPersistence: SessionDeletePersistence
   workspaceRegistry: SessionDeleteWorkspaceRegistry

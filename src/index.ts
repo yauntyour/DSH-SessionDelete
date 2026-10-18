@@ -2,8 +2,9 @@
  * dsh-session-delete host half: the /session-delete JSON API. One route —
  * POST /session-delete/api/delete { sessionId } — runs the deletion
  * transaction (see delete-session.ts) behind the same browser-trust fence
- * as the /api gateway (loopback Host or a boot-sampled trusted authority),
- * because this route permanently removes real session data.
+ * as the /api gateway (loopback Host, plus the boot-sampled trusted
+ * authorities the optional `webStartup` service carries — read lazily, see
+ * apply), because this route permanently removes real session data.
  */
 import { stat } from 'node:fs/promises'
 import { dirname } from 'node:path'
@@ -15,6 +16,7 @@ import type {
   SessionDeleteHttpRequest,
   SessionDeleteHttpResponse,
   SessionDeleteLiveSession,
+  SessionDeleteWebStartup,
   SessionDeleteWorkspaceState,
 } from './context-types.ts'
 import { isTrustedApiRequest } from './trust-fence.ts'
@@ -30,10 +32,16 @@ import {
 /** Plugin identity for cordis.yml rows. */
 export const name = 'dsh-session-delete'
 
-/** Services required before mounting. */
+/**
+ * Services required before mounting. Only services that really exist may be
+ * listed: cordis keeps an entry whose inject cannot be resolved pending
+ * forever, so apply() would never run and no route would ever be registered.
+ * `webStartup` is deliberately NOT injected — it is read lazily in apply(),
+ * because a missing or renamed optional service must not be able to leave
+ * this entry pending.
+ */
 export const inject = [
   'webServer',
-  'webRuntime',
   'sessions',
   'sessionPersistence',
   'workspaceRegistry',
@@ -48,8 +56,15 @@ export const ROUTE_PREFIX = '/session-delete/api'
  * @param ctx - the host cordis context.
  */
 export function apply(ctx: Context): void {
+  // Read the trusted authorities lazily through ctx.get: the webStartup
+  // service is optional here (absent in a bare composition, and inject must
+  // not name it), and its absence simply means no extra trusted authority —
+  // the fence still admits only loopback + same-origin.
+  const trustedHosts = (): readonly string[] =>
+    (ctx.get('webStartup') as SessionDeleteWebStartup | undefined)?.trustedHosts ?? []
+
   const fence = (req: SessionDeleteHttpRequest): boolean =>
-    isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)
+    isTrustedApiRequest(req, trustedHosts())
 
   const deps: DeleteSessionDeps = {
     liveSession: (id: string): SessionDeleteLiveSession | undefined => ctx.sessions.get(id),
