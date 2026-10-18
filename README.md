@@ -28,6 +28,13 @@ npm install && npm run build && npm pack
 dsh plugin --profile web add "D:/Developments/Workspace/DSH-SessionDelete/dsh-session-delete-0.2.0.tgz"
 ```
 
+### 备选：直接从 GitHub 安装
+
+```sh
+# 仓库需已提交构建产物 lib/（见「开发」一节的注意事项）
+dsh plugin --profile desktop add github:yauntyour/DSH-SessionDelete
+```
+
 > 若 `pnpm` 报 `ERR_PNPM_UNEXPECTED_STORE`（profile 的 node_modules 与当前 store 不一致，
 > 通常是 pnpm 版本/配置变更导致），先在 profile 目录重装对齐：
 >
@@ -114,6 +121,14 @@ npm test             # vitest（29 个契约测试）
 npm run build        # tsc（server lib/）+ tsdown（client bundle lib/client.js）
 npm pack             # 发布 tarball
 ```
+
+> ⚠️ **改动源码后必须重新构建并提交 `lib/`**
+>
+> DSH 支持以 GitHub 依赖直接安装本插件（见上「备选」）。这种安装方式**不会执行构建脚本**
+> （profile 的 pnpm 受供应链策略约束，`prepare`/`prepublishOnly` 不会运行），启用时由 DSH
+> 直接 `import` 包内的 `lib/index.js`。因此 `.gitignore` 已不再忽略 `lib/`：修改 `src/` 之后
+> 请务必执行 `npm run build` **并把 `lib/` 一起提交**，否则全新安装会在启动时报
+> `ERR_MODULE_NOT_FOUND: ...\dsh-session-delete\lib\index.js`（插件启用失败）。
 
 ## 🗑️ 卸载
 
